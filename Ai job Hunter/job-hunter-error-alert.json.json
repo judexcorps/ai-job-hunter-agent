@@ -1,0 +1,50 @@
+{
+  "name": "Job Hunter Error Alert",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "2",
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "sendTo": "runotenijude@gmail.com",
+        "subject": "=Job Hunter failed: {{ $json.workflow.name }}",
+        "emailType": "html",
+        "message": "=Node: {{ $json.execution.lastNodeExecuted }}<br>Error: {{ $json.execution.error.message }}<br>Run: {{ $json.execution.url }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

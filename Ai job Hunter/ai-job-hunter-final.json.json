@@ -1,0 +1,793 @@
+{
+  "name": "AI Job Hunter Agent (final)",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Daily 8am Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        200
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cv",
+              "name": "cv",
+              "value": "PASTE YOUR CV TEXT HERE (plain text, no phone number or address)",
+              "type": "string"
+            },
+            {
+              "id": "jobCategory",
+              "name": "jobCategory",
+              "value": "software-dev",
+              "type": "string"
+            },
+            {
+              "id": "jobLimit",
+              "name": "jobLimit",
+              "value": 20,
+              "type": "number"
+            },
+            {
+              "id": "minimumScore",
+              "name": "minimumScore",
+              "value": 60,
+              "type": "number"
+            },
+            {
+              "id": "maxToScore",
+              "name": "maxToScore",
+              "value": 10,
+              "type": "number"
+            },
+            {
+              "id": "notifyEmail",
+              "name": "notifyEmail",
+              "value": "runotenijude@gmail.com",
+              "type": "string"
+            },
+            {
+              "id": "model",
+              "name": "model",
+              "value": "gemini-flash-latest",
+              "type": "string"
+            },
+            {
+              "id": "keywords",
+              "name": "keywords",
+              "value": "developer,software,automation,ai,web,frontend,backend,full stack,engineer,technician,electrical,electronics,intern,junior,graduate,trainee",
+              "type": "string"
+            },
+            {
+              "id": "excludeTitleWords",
+              "name": "excludeTitleWords",
+              "value": "senior,lead,principal,staff,manager,director,head of,vp,architect",
+              "type": "string"
+            },
+            {
+              "id": "targetRoles",
+              "name": "targetRoles",
+              "value": "junior or entry-level software, AI automation or web developer; graduate trainee; internship; electrical/electronics technician",
+              "type": "string"
+            },
+            {
+              "id": "candidateLocation",
+              "name": "candidateLocation",
+              "value": "Benin City, Nigeria (open to Warri, Delta State, or remote)",
+              "type": "string"
+            },
+            {
+              "id": "searchTerm",
+              "name": "searchTerm",
+              "value": "junior developer",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3",
+      "name": "Read Past Jobs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        200
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "filtersUI": {},
+        "options": {}
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "4",
+      "name": "Collect Seen URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const urls = $input.all().map(i => i.json.url).filter(Boolean);\nreturn [{ json: { seenUrls: urls } }];\n"
+      }
+    },
+    {
+      "id": "5",
+      "name": "Fetch Remotive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        200
+      ],
+      "parameters": {
+        "url": "=https://remotive.com/api/remote-jobs?category={{ $('Settings').first().json.jobCategory }}&limit={{ $('Settings').first().json.jobLimit }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "6",
+      "name": "Fetch Arbeitnow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        200
+      ],
+      "parameters": {
+        "url": "https://www.arbeitnow.com/api/job-board-api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "7",
+      "name": "Fetch Jobicy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        200
+      ],
+      "parameters": {
+        "url": "https://jobicy.com/api/v2/remote-jobs?count=30",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "8",
+      "name": "Fetch Remote OK",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        200
+      ],
+      "parameters": {
+        "url": "https://remoteok.com/api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (compatible; JobHunterAgent/1.0)"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "9",
+      "name": "Fetch We Work Remotely",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        200
+      ],
+      "parameters": {
+        "url": "https://weworkremotely.com/remote-jobs.rss",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (compatible; JobHunterAgent/1.0)"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "10",
+      "name": "Fetch Himalayas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        200
+      ],
+      "parameters": {
+        "url": "=https://himalayas.app/jobs/api/search?q={{ $('Settings').first().json.searchTerm }}&sort=recent",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "11",
+      "name": "Fetch Working Nomads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        200
+      ],
+      "parameters": {
+        "url": "https://www.workingnomads.com/api/exposed_jobs/",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "12",
+      "name": "Normalize & Dedupe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        560
+      ],
+      "parameters": {
+        "jsCode": "const s = $('Settings').first().json;\nconst list = x => String(x || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);\nconst keywords = list(s.keywords);\nconst blocked = list(s.excludeTitleWords);\nconst maxToScore = Number(s.maxToScore) || 10;\nlet seenUrls = new Set();\ntry { seenUrls = new Set($('Collect Seen URLs').first().json.seenUrls || []); } catch (e) {}\n\nconst strip = h => String(h || '').replace(/<!\\[CDATA\\[|\\]\\]>/g, '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&amp;|&quot;|&#\\d+;/g, ' ').replace(/\\s+/g, ' ').trim();\nconst iso = v => {\n  if (!v) return '';\n  const d = typeof v === 'number' ? new Date(v > 1e12 ? v : v * 1000) : new Date(v);\n  return isNaN(d) ? '' : d.toISOString();\n};\nconst load = node => {\n  const items = $(node).all().map(i => i.json);\n  if (!items.length || items[0].error) throw new Error('source error');\n  if (typeof items[0].data === 'string') {\n    const t = items[0].data.trim();\n    return t.startsWith('<') ? t : JSON.parse(t);\n  }\n  return items.length > 1 ? items : items[0];\n};\nconst tag = (xml, name) => {\n  const m = xml.match(new RegExp('<' + name + '[^>]*>([\\\\s\\\\S]*?)</' + name + '>'));\n  return m ? m[1] : '';\n};\nconst rssItems = xml => (typeof xml === 'string' ? (xml.match(/<item>[\\s\\S]*?<\\/item>/g) || []) : []);\n\nconst sources = [\n  { node: 'Fetch Remotive', label: 'Remotive', pick: r => r.jobs,\n    map: j => ({ id: 'remotive-' + j.id, title: j.title, company: j.company_name, location: j.candidate_required_location || 'Remote', url: j.url, description: j.description, posted: iso(j.publication_date) }) },\n  { node: 'Fetch Arbeitnow', label: 'Arbeitnow', pick: r => r.data,\n    map: j => ({ id: 'arbeitnow-' + j.slug, title: j.title, company: j.company_name || j.companyName, location: (j.location || '') + (j.remote ? ' (Remote)' : ''), url: j.url || j.jobUrl, description: j.description, posted: iso(j.created_at) }) },\n  { node: 'Fetch Jobicy', label: 'Jobicy', pick: r => r.jobs,\n    map: j => ({ id: 'jobicy-' + j.id, title: j.jobTitle, company: j.companyName, location: j.jobGeo || 'Remote', url: j.url, description: j.jobDescription || j.jobExcerpt, posted: iso(j.pubDate) }) },\n  { node: 'Fetch Remote OK', label: 'Remote OK', pick: r => (Array.isArray(r) ? r : []).filter(j => j && j.id && j.position),\n    map: j => ({ id: 'remoteok-' + j.id, title: j.position, company: j.company, location: j.location || 'Remote', url: j.url || j.apply_url, description: j.description, posted: iso(j.date) }) },\n  { node: 'Fetch We Work Remotely', label: 'We Work Remotely', pick: rssItems,\n    map: x => {\n      const full = strip(tag(x, 'title'));\n      const i = full.indexOf(':');\n      return { id: 'wwr-' + strip(tag(x, 'guid') || tag(x, 'link')), title: i > 0 ? full.slice(i + 1).trim() : full, company: i > 0 ? full.slice(0, i).trim() : '', location: strip(tag(x, 'region')) || 'Remote', url: strip(tag(x, 'link')), description: tag(x, 'description'), posted: iso(strip(tag(x, 'pubDate'))) };\n    } },\n  { node: 'Fetch Himalayas', label: 'Himalayas', pick: r => r.jobs,\n    map: j => ({ id: 'himalayas-' + (j.guid || j.applicationLink || j.title), title: j.title, company: j.companyName || j.company, location: Array.isArray(j.locationRestrictions) && j.locationRestrictions.length ? j.locationRestrictions.join(', ') : 'Worldwide', url: j.applicationLink || j.url || j.guid, description: j.description || j.excerpt, posted: iso(j.pubDate) }) },\n  { node: 'Fetch Working Nomads', label: 'Working Nomads', pick: r => (Array.isArray(r) ? r : []).filter(j => j && j.title && !j.expired),\n    map: j => ({ id: 'workingnomads-' + j.url, title: j.title, company: j.company_name, location: j.location || 'Remote', url: j.url, description: j.description, posted: iso(j.pub_date) }) },\n];\n\nconst stats = { sources: {}, fetched: 0, tooSenior: 0, offTopic: 0, duplicates: 0, alreadySeen: 0, queued: 0 };\nconst pool = [];\nconst keys = new Set();\n\nfor (const src of sources) {\n  let raw = [];\n  try {\n    raw = src.pick(load(src.node)) || [];\n    stats.sources[src.label] = raw.length;\n  } catch (e) {\n    stats.sources[src.label] = 'failed';\n    continue;\n  }\n  stats.fetched += raw.length;\n  for (const r of raw) {\n    const j = src.map(r);\n    j.source = src.label;\n    j.title = strip(j.title);\n    j.company = strip(j.company);\n    j.description = strip(j.description).slice(0, 1800);\n    if (!j.title || !j.url) continue;\n    const title = j.title.toLowerCase();\n    if (blocked.some(b => title.includes(b))) { stats.tooSenior++; continue; }\n    const hits = keywords.filter(k => (title + ' ' + j.description.toLowerCase()).includes(k)).length;\n    if (keywords.length && hits === 0) { stats.offTopic++; continue; }\n    const key = (j.title + '|' + j.company).toLowerCase();\n    if (keys.has(key) || keys.has(j.url)) { stats.duplicates++; continue; }\n    keys.add(key); keys.add(j.url);\n    if (seenUrls.has(j.url)) { stats.alreadySeen++; continue; }\n    j.hits = hits;\n    pool.push(j);\n  }\n}\n\npool.sort((a, b) => b.hits - a.hits || String(b.posted).localeCompare(String(a.posted)));\nstats.queued = Math.min(pool.length, maxToScore);\nreturn pool.map(j => ({ json: { ...j, company_name: j.company, _stats: stats } }));\n"
+      }
+    },
+    {
+      "id": "13",
+      "name": "Limit to 10",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        220,
+        560
+      ],
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.maxToScore }}"
+      }
+    },
+    {
+      "id": "14",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        560
+      ],
+      "parameters": {
+        "jsCode": "const s = $('Settings').first().json;\nconst minScore = Number(s.minimumScore) || 60;\nreturn $input.all().map(item => {\n  const j = item.json;\n  const system = 'You are a pragmatic technical recruiter judging job fit for a junior candidate. Be honest and calibrated, never inflate scores, and never invent facts about the candidate. Reply with JSON only.';\n  const user = [\n    'CANDIDATE CV:', s.cv, '',\n    'CANDIDATE TARGETS:',\n    'Roles: ' + s.targetRoles,\n    'Location: ' + s.candidateLocation, '',\n    'JOB:',\n    'Title: ' + j.title,\n    'Company: ' + j.company,\n    'Location: ' + j.location,\n    'Source: ' + j.source,\n    'Description: ' + j.description, '',\n    'SCORING RUBRIC (total 0-100):',\n    '- Skills and tools overlap with the CV: 40 points',\n    '- Seniority fit: junior, entry-level, graduate and internship roles score high; roles needing 3+ years of experience score at most 35 overall: 25 points',\n    '- Location and work authorization: worldwide-remote or Africa-friendly is fine; if the job requires residency or work authorization in the US, UK or EU, cap the total score at 40: 20 points',\n    '- Relevance to the candidate target roles: 15 points', '',\n    'OUTPUT RULES (every list has at most 3 items, except skills which have at most 5):',\n    '- matched_skills: skills from the CV that the job needs',\n    '- missing_skills: job requirements that are not in the CV',\n    '- strengths: why the candidate is a good fit',\n    '- weaknesses: where the candidate is weaker for this job',\n    '- resume_improvements: specific edits to the CV for this job',\n    '- keywords: important keywords from the job post to add to the CV',\n    '- interview_tips: what to prepare for the interview',\n    '- reason: one sentence explaining the score',\n    '- cover_letter: if score >= ' + minScore + ', write a tailored cover letter of about 120 words using only facts from the CV; otherwise an empty string',\n  ].join('\\n');\n  const arr = { type: 'ARRAY', items: { type: 'STRING' } };\n  const requestBody = {\n    systemInstruction: { parts: [{ text: system }] },\n    contents: [{ parts: [{ text: user }] }],\n    generationConfig: {\n      temperature: 0.2,\n      responseMimeType: 'application/json',\n      responseSchema: {\n        type: 'OBJECT',\n        properties: {\n          score: { type: 'INTEGER' },\n          fit: { type: 'STRING', enum: ['strong', 'moderate', 'weak'] },\n          matched_skills: arr, missing_skills: arr, strengths: arr, weaknesses: arr,\n          resume_improvements: arr, keywords: arr, interview_tips: arr,\n          reason: { type: 'STRING' }, cover_letter: { type: 'STRING' },\n        },\n        required: ['score', 'fit', 'matched_skills', 'missing_skills', 'strengths', 'weaknesses', 'resume_improvements', 'keywords', 'interview_tips', 'reason', 'cover_letter'],\n      },\n    },\n  };\n  return { json: { ...j, requestBody } };\n});\n"
+      }
+    },
+    {
+      "id": "15",
+      "name": "Score with Gemini",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        560
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/' + $('Settings').first().json.model + ':generateContent' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 6000
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "16",
+      "name": "Parse Scores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        560
+      ],
+      "parameters": {
+        "jsCode": "const jobs = $('Build Prompt').all();\nconst today = new Date().toISOString().slice(0, 10);\nconst join = v => (Array.isArray(v) ? v.join('; ') : '');\nconst out = [];\n\n$input.all().forEach((item, i) => {\n  const job = jobs[i].json;\n  const base = { date: today, source: job.source, title: job.title, company: job.company, location: job.location, url: job.url };\n  let r = null;\n  try {\n    r = JSON.parse(item.json.candidates[0].content.parts[0].text);\n  } catch (e) {}\n  if (!r) {\n    out.push({ json: { ...base, score: 0, fit: 'error', matched_skills: '', missing_skills: '', strengths: '', weaknesses: '', resume_improvements: '', keywords: '', interview_tips: '', reason: 'Scoring failed', cover_letter: '', application_status: 'New', status: 'failed' } });\n    return;\n  }\n  const score = Math.max(0, Math.min(100, Math.round(Number(r.score) || 0)));\n  out.push({ json: { ...base, score, fit: r.fit || '', matched_skills: join(r.matched_skills), missing_skills: join(r.missing_skills), strengths: join(r.strengths), weaknesses: join(r.weaknesses), resume_improvements: join(r.resume_improvements), keywords: join(r.keywords), interview_tips: join(r.interview_tips), reason: r.reason || '', cover_letter: r.cover_letter || '', application_status: 'New', status: 'scored' } });\n});\nreturn out;\n"
+      }
+    },
+    {
+      "id": "17",
+      "name": "Scored OK",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "scored",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "18",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1320,
+        460
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "19",
+      "name": "Build Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        700
+      ],
+      "parameters": {
+        "jsCode": "const s = $('Settings').first().json;\nconst minScore = Number(s.minimumScore) || 60;\nconst stats = $('Normalize & Dedupe').first().json._stats || {};\nconst rows = $input.all().map(i => i.json);\nconst scored = rows.filter(r => r.status === 'scored');\nconst failed = rows.length - scored.length;\nconst matches = scored.filter(r => r.score >= minScore).sort((a, b) => b.score - a.score);\nconst avg = scored.length ? Math.round(scored.reduce((t, r) => t + r.score, 0) / scored.length) : 0;\nconst best = scored.length ? Math.max(...scored.map(r => r.score)) : 0;\nconst topCompanies = [...new Set(matches.map(m => m.company))].slice(0, 3).join(', ') || 'none';\nconst esc = x => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst date = new Date().toISOString().slice(0, 10);\nconst src = Object.entries(stats.sources || {}).map(([k, v]) => k + ': ' + v).join(' | ');\n\nlet html = '<h2>Daily Job Report - ' + date + '</h2>';\nhtml += '<p><b>Jobs fetched:</b> ' + (stats.fetched || 0) + '<br><b>Scored by AI:</b> ' + scored.length + '<br><b>Qualified (' + minScore + '+):</b> ' + matches.length + '<br><b>Highest match:</b> ' + best + '%<br><b>Average score:</b> ' + avg + '%<br><b>Top companies:</b> ' + esc(topCompanies) + '<br><b>Sources:</b> ' + esc(src) + (failed ? '<br><b>Warning:</b> ' + failed + ' job(s) failed to score' : '') + '</p>';\n\nif (!matches.length) {\n  html += '<p>No jobs reached the ' + minScore + ' point threshold today.</p>';\n} else {\n  html += '<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\"><tr><th>Score</th><th>Role</th><th>Company</th><th>Source</th></tr>';\n  for (const m of matches) {\n    html += '<tr><td>' + m.score + '</td><td><a href=\"' + esc(m.url) + '\">' + esc(m.title) + '</a></td><td>' + esc(m.company) + '</td><td>' + esc(m.source) + '</td></tr>';\n  }\n  html += '</table>';\n  for (const m of matches.slice(0, 3)) {\n    html += '<hr><h3>' + esc(m.title) + ' at ' + esc(m.company) + ' (' + m.score + '/100)</h3><p>' + esc(m.reason) + '</p>';\n    html += '<p><b>Strengths:</b> ' + esc(m.strengths) + '<br><b>Weaknesses:</b> ' + esc(m.weaknesses) + '<br><b>CV improvements:</b> ' + esc(m.resume_improvements) + '<br><b>Keywords:</b> ' + esc(m.keywords) + '<br><b>Interview tips:</b> ' + esc(m.interview_tips) + '</p>';\n    if (m.cover_letter) html += '<p><b>Draft cover letter:</b><br>' + esc(m.cover_letter).replace(/\\n/g, '<br>') + '</p>';\n  }\n}\nhtml += '<hr><p style=\"color:#777;font-size:12px\">Listings come from the public feeds of Remotive, Remote OK, We Work Remotely, Himalayas, Jobicy, Working Nomads and Arbeitnow. Follow each link to apply on the source site.</p>';\nreturn [{ json: { html, subject: 'Daily Job Report: ' + matches.length + ' match' + (matches.length === 1 ? '' : 'es') + ' - ' + date } }];\n"
+      }
+    },
+    {
+      "id": "20",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1320,
+        700
+      ],
+      "parameters": {
+        "sendTo": "={{ $('Settings').first().json.notifyEmail }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "s1",
+      "name": "Note s1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        60
+      ],
+      "parameters": {
+        "content": "## 1. Settings and memory\nOne Settings node controls the whole run. Past jobs are read from Google Sheets so duplicates are skipped.",
+        "height": 120,
+        "width": 560,
+        "color": 4
+      }
+    },
+    {
+      "id": "s2",
+      "name": "Note s2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        840,
+        60
+      ],
+      "parameters": {
+        "content": "## 2. Seven free job feeds\nEach source retries and is skipped if it fails, so one outage never stops the run.",
+        "height": 110,
+        "width": 1500,
+        "color": 5
+      }
+    },
+    {
+      "id": "s3",
+      "name": "Note s3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        400
+      ],
+      "parameters": {
+        "content": "## 3. Normalize, filter, dedupe, AI score\nOne schema, seniority and keyword filters, then Gemini scores each job with a rubric and returns structured JSON.",
+        "height": 120,
+        "width": 1000,
+        "color": 6
+      }
+    },
+    {
+      "id": "s4",
+      "name": "Note s4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        300
+      ],
+      "parameters": {
+        "content": "## 4. Store and report\nAll scored jobs go to Sheets. A daily report with statistics and cover letters is emailed.",
+        "height": 110,
+        "width": 440,
+        "color": 7
+      }
+    }
+  ],
+  "connections": {
+    "Daily 8am Trigger": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Read Past Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Past Jobs": {
+      "main": [
+        [
+          {
+            "node": "Collect Seen URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Seen URLs": {
+      "main": [
+        [
+          {
+            "node": "Fetch Remotive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Remotive": {
+      "main": [
+        [
+          {
+            "node": "Fetch Arbeitnow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Arbeitnow": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jobicy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Jobicy": {
+      "main": [
+        [
+          {
+            "node": "Fetch Remote OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Remote OK": {
+      "main": [
+        [
+          {
+            "node": "Fetch We Work Remotely",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch We Work Remotely": {
+      "main": [
+        [
+          {
+            "node": "Fetch Himalayas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Himalayas": {
+      "main": [
+        [
+          {
+            "node": "Fetch Working Nomads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Working Nomads": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Dedupe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize & Dedupe": {
+      "main": [
+        [
+          {
+            "node": "Limit to 10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit to 10": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Score with Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score with Gemini": {
+      "main": [
+        [
+          {
+            "node": "Parse Scores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Scores": {
+      "main": [
+        [
+          {
+            "node": "Scored OK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scored OK": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Digest": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
